@@ -1,0 +1,22 @@
+{
+  "name": "diffraction",
+  "version": "0.1.0",
+  "description": "A beautiful in-browser git diff tool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run server/index.ts",
+    "start": "bun run server/index.ts",
+    "build:web": "cd web && bun run build",
+    "dev:web": "cd web && bun run dev",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}
