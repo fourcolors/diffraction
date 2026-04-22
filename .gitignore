@@ -6,3 +6,9 @@ web/node_modules
 *.log
 .env
 bun.lockb
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

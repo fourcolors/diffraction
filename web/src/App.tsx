@@ -154,9 +154,10 @@ export function App() {
           onChange={(e) => setRepoPathInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") openRepo(repoPathInput); }}
           style={{ flex: 1, minWidth: 280 }}
+          data-testid="repo-input"
         />
-        <button className="btn btn-primary" onClick={() => openRepo(repoPathInput)}>Open</button>
-        <div className="status" title={status}>
+        <button className="btn btn-primary" onClick={() => openRepo(repoPathInput)} data-testid="open-btn">Open</button>
+        <div className="status" title={status} data-testid="status" data-status={status}>
           <span className={`status-dot ${status === "live" ? "live" : status === "error" ? "err" : ""}`} />
           <span>{statusLabel(status, repoInfo)}</span>
         </div>
@@ -299,13 +300,15 @@ function RecentRepos({
   return (
     <section style={{ marginTop: "1.5rem" }}>
       <div className="label">Recent</div>
-      <ul className="recent" style={{ marginTop: "0.25rem" }}>
+      <ul className="recent" style={{ marginTop: "0.25rem" }} data-testid="recent-list">
         {recent.map((p) => (
           <li
             key={p}
             className={p === current ? "active" : ""}
             onClick={() => onPick(p)}
             title={p}
+            data-testid="recent-item"
+            data-path={p}
             style={p === current ? { color: "var(--text)", background: "var(--bg-3)" } : undefined}
           >
             {shortenPath(p)}
@@ -340,7 +343,7 @@ function FileDiff({ file }: { file: DiffFile }) {
   const name = file.newPath || file.oldPath;
   const renamed = file.oldPath && file.newPath && file.oldPath !== file.newPath;
   return (
-    <div className="file">
+    <div className="file" data-testid="file-diff" data-file={name}>
       <div className="file-header" onClick={() => setOpen((v) => !v)} style={{ cursor: "pointer" }}>
         <span className="chevron">{open ? "▾" : "▸"}</span>
         <span className="file-name">
