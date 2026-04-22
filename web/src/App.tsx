@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseUnifiedDiff, type DiffFile } from "./parseDiff";
 import { initHighlighter, highlightHunk, langFromPath } from "./highlight";
+import { computeHunkRuns, applyRunsToHtml } from "./wordDiff";
 
 // ─── Types mirrored from server/git.ts ─────────────────────────────────────
 type DiffMode =
@@ -367,6 +368,9 @@ const FileDiff = React.memo(function FileDiff({ file, highlighterReady }: {
     [file.hunks, language, highlighterReady]
   );
 
+  // Per-hunk word-diff runs: one array per line (or null for plain render).
+  const hunkRuns = useMemo(() => file.hunks.map((h) => computeHunkRuns(h)), [file.hunks]);
+
   return (
     <div className="file" data-testid="file-diff" data-file={name}>
       <div className="file-header" onClick={() => setOpen((v) => !v)} style={{ cursor: "pointer" }}>
@@ -379,19 +383,23 @@ const FileDiff = React.memo(function FileDiff({ file, highlighterReady }: {
       {open && !file.binary && file.hunks.map((h, i) => (
         <div className="hunk" key={i}>
           <div className="hunk-header">{h.header}</div>
-          {h.lines.map((l, j) => (
-            <div className={`line ${l.kind}`} key={j}>
-              <span className="line-num">{l.oldNum ?? ""}</span>
-              <span className="line-num">{l.newNum ?? ""}</span>
-              <span className="line-content">
-                <span className="line-marker">{l.kind === "add" ? "+" : l.kind === "del" ? "−" : " "}</span>
-                <span
-                  className="line-code"
-                  dangerouslySetInnerHTML={{ __html: highlighted[i]?.[j] ?? "" }}
-                />
-              </span>
-            </div>
-          ))}
+          {h.lines.map((l, j) => {
+            const baseHtml = highlighted[i]?.[j] ?? "";
+            const runs = hunkRuns[i]?.[j] ?? null;
+            const html = runs && (l.kind === "add" || l.kind === "del")
+              ? applyRunsToHtml(baseHtml, l.content, runs, l.kind === "add" ? "w-add" : "w-del")
+              : baseHtml;
+            return (
+              <div className={`line ${l.kind}`} key={j}>
+                <span className="line-num">{l.oldNum ?? ""}</span>
+                <span className="line-num">{l.newNum ?? ""}</span>
+                <span className="line-content">
+                  <span className="line-marker">{l.kind === "add" ? "+" : l.kind === "del" ? "−" : " "}</span>
+                  <span className="line-code" dangerouslySetInnerHTML={{ __html: html }} />
+                </span>
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>

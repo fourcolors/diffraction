@@ -315,6 +315,18 @@ button, input, select {
 .line.del .line-marker { color: var(--red); }
 .line-code { white-space: pre; }
 
+/* Word-level intra-line diff highlights */
+.w-add {
+  background: var(--green-bg-strong);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.w-del {
+  background: var(--red-bg-strong);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 /* Empty / loading */
 .empty {
   display: flex;
