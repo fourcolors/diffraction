@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseUnifiedDiff, type DiffFile } from "./parseDiff";
+import { initHighlighter, highlightHunk, langFromPath } from "./highlight";
 
 // ─── Types mirrored from server/git.ts ─────────────────────────────────────
 type DiffMode =
@@ -71,6 +72,12 @@ export function App() {
   const [status, setStatus] = useState<"idle" | "connecting" | "live" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>(() => loadRecent());
+  const [highlighterReady, setHighlighterReady] = useState<boolean>(false);
+
+  // ── Preload Shiki highlighter (non-blocking, fallback is plaintext) ──────
+  useEffect(() => {
+    initHighlighter().then(() => setHighlighterReady(true)).catch(() => setHighlighterReady(false));
+  }, []);
 
   // ── Open repo ────────────────────────────────────────────────────────────
   const openRepo = useCallback(async (path: string) => {
@@ -190,7 +197,7 @@ export function App() {
             </div>
           )}
           {repoInfo && (
-            <DiffView files={parsed} stat={stat} />
+            <DiffView files={parsed} stat={stat} highlighterReady={highlighterReady} />
           )}
         </main>
       </div>
@@ -320,7 +327,11 @@ function RecentRepos({
 }
 
 // ─── Diff View ─────────────────────────────────────────────────────────────
-function DiffView({ files, stat }: { files: DiffFile[]; stat: DiffStat | null }) {
+function DiffView({ files, stat, highlighterReady }: {
+  files: DiffFile[];
+  stat: DiffStat | null;
+  highlighterReady: boolean;
+}) {
   if (files.length === 0) {
     return <div className="empty"><h2>No changes.</h2></div>;
   }
@@ -333,15 +344,29 @@ function DiffView({ files, stat }: { files: DiffFile[]; stat: DiffStat | null })
           <span style={{ color: "var(--red)" }}>−{stat.totalDeletions}</span>
         </div>
       )}
-      {files.map((f, idx) => <FileDiff key={`${f.newPath}:${idx}`} file={f} />)}
+      {files.map((f, idx) => (
+        <FileDiff key={`${f.newPath}:${idx}`} file={f} highlighterReady={highlighterReady} />
+      ))}
     </>
   );
 }
 
-function FileDiff({ file }: { file: DiffFile }) {
+const FileDiff = React.memo(function FileDiff({ file, highlighterReady }: {
+  file: DiffFile;
+  highlighterReady: boolean;
+}) {
   const [open, setOpen] = useState(true);
   const name = file.newPath || file.oldPath;
   const renamed = file.oldPath && file.newPath && file.oldPath !== file.newPath;
+  const language = useMemo(() => langFromPath(name), [name]);
+
+  // Per-hunk highlight: array of arrays of per-line HTML strings.
+  // Depends on `highlighterReady` so we re-render once shiki boots.
+  const highlighted = useMemo(
+    () => file.hunks.map((h) => highlightHunk(h, language)),
+    [file.hunks, language, highlighterReady]
+  );
+
   return (
     <div className="file" data-testid="file-diff" data-file={name}>
       <div className="file-header" onClick={() => setOpen((v) => !v)} style={{ cursor: "pointer" }}>
@@ -359,8 +384,11 @@ function FileDiff({ file }: { file: DiffFile }) {
               <span className="line-num">{l.oldNum ?? ""}</span>
               <span className="line-num">{l.newNum ?? ""}</span>
               <span className="line-content">
-                {l.kind === "add" ? "+" : l.kind === "del" ? "−" : " "}
-                {l.content}
+                <span className="line-marker">{l.kind === "add" ? "+" : l.kind === "del" ? "−" : " "}</span>
+                <span
+                  className="line-code"
+                  dangerouslySetInnerHTML={{ __html: highlighted[i]?.[j] ?? "" }}
+                />
               </span>
             </div>
           ))}
@@ -368,7 +396,7 @@ function FileDiff({ file }: { file: DiffFile }) {
       ))}
     </div>
   );
-}
+});
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 function statusLabel(s: string, info: RepoInfo | null): string {

@@ -301,12 +301,19 @@ button, input, select {
   padding: 0 0.75rem;
   white-space: pre;
   overflow-x: auto;
+  font-family: var(--mono);
+}
+.line-marker {
+  display: inline-block;
+  width: 1.25ch;
+  color: var(--dim);
+  user-select: none;
 }
 .line.add { background: var(--green-bg); }
-.line.add .line-content::before { content: "+ "; color: var(--green); }
+.line.add .line-marker { color: var(--green); }
 .line.del { background: var(--red-bg); }
-.line.del .line-content::before { content: "- "; color: var(--red); }
-.line.ctx .line-content::before { content: "  "; }
+.line.del .line-marker { color: var(--red); }
+.line-code { white-space: pre; }
 
 /* Empty / loading */
 .empty {
